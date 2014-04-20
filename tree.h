@@ -76,7 +76,7 @@ public:
      * @brief returns true if this node has no children
      */
     inline bool is_leaf() const {
-        return left().is_none() && right().is_none();
+        return m_child_left.is_none() && m_child_right.is_none();
     }
 
     /**
@@ -251,15 +251,15 @@ bool Tree<T>::contains(const T& val) const
         return true;
     } else if (m_node > val) {
         // go left
-        if (left().is_some()) {
-            return left()->contains(val);
+        if (m_child_left.is_some()) {
+            return m_child_left->contains(val);
         } else {
             return false;
         }
     } else {
         // go right
-        if (right().is_some()) {
-            return right()->contains(val);
+        if (m_child_right.is_some()) {
+            return m_child_right->contains(val);
         } else {
             return false;
         }
