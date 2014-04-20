@@ -112,6 +112,11 @@ public:
      * @brief returns the number of elements in the tree
      */
     size_t size() const;
+    
+    /**
+     * @brief returns the maximum height of the tree
+     */
+    size_t height() const;
 
     /**
      * @brief returns a new tree with node inserted into it.
@@ -298,6 +303,14 @@ size_t Tree<T>::size() const
     if (m_child_left.is_some()) { val += m_child_left->size(); }
     if (m_child_right.is_some()) { val += m_child_right->size(); }
     return val;
+}
+
+template<typename T>
+size_t Tree<T>::height() const
+{
+    size_t hgt_left = (m_child_left.is_some() ? m_child_left->height() : 0);
+    size_t hgt_right = (m_child_right.is_some() ? m_child_right->height() : 0);
+    return std::max(hgt_left, hgt_right) + 1;
 }
 
 

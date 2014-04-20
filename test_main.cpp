@@ -145,3 +145,29 @@ BOOST_AUTO_TEST_CASE(test_tree_min_max)
 }
 
 
+BOOST_AUTO_TEST_CASE(test_tree_height)
+{
+    // test tree height
+    const int inserts[] = {
+           5,            15,
+        2,    7,     12,    17,
+      1, 3, 6, 8,  11, 13, 16, 18
+    };
+    const size_t heights[] = {
+        2,               2,
+       3,     3,     3,     3,
+      4, 4,  4, 4,  4, 4,  4,  4
+    };
+    size_t len = sizeof(inserts)/sizeof(inserts[0]);
+    BOOST_REQUIRE( len == sizeof(heights)/sizeof(heights[0]) );
+
+    Option<Tree<int>> tree(Some(Tree<int>(10)));
+    for (size_t i=0; i<len; ++i) {
+        tree = tree->insert(inserts[i]);
+        BOOST_CHECK_MESSAGE(tree->height() == heights[i],
+                            "tree height " << tree->height()
+                            << " should equal expected height "
+                            << heights[i]);
+    }
+}
+
