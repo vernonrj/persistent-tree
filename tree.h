@@ -90,28 +90,28 @@ public:
     size_t size() const;
 
     /**
-     * @brief returns a new tree with child inserted into it.
+     * @brief returns a new tree with node inserted into it.
      *
      * @note this is NOT an in-place operation.
      * The previous version of the tree is preserved.
      */
-    Tree<T> insert(Option<Tree<T>> child) const;
+    Tree<T> insert(Option<Tree<T>> node) const;
 
     /**
-     * @brief returns a new tree with child inserted into it.
+     * @brief returns a new tree with node inserted into it.
      *
      * @note this is NOT an in-place operation.
      * The previous version of the tree is preserved.
      */
-    Tree<T> insert(Tree<T> child) const;
+    Tree<T> insert(Tree<T> node) const;
 
     /**
-     * @brief returns a new tree with child inserted into it.
+     * @brief returns a new tree with node inserted into it.
      *
      * @note this is NOT an in-place operation.
      * The previous version of the tree is preserved.
      */
-    Tree<T> insert(T child) const;
+    Tree<T> insert(T node) const;
 
     /**
      * @brief returns a new tree with node removed from it.
@@ -278,42 +278,48 @@ size_t Tree<T>::size() const
 
 
 template<typename T>
-Tree<T> Tree<T>::insert(Option<Tree<T>> child) const
+Tree<T> Tree<T>::insert(Option<Tree<T>> node) const
 {
-    Tree<T> head(*this);
-    if (child.is_some()) {
-        std::shared_ptr<Tree<T>> value = child.get_ref();
-        if (m_node > **value) {
-            // left
-            if (head.m_child_left.is_none()) {
-                head.m_child_left = child;
-            } else {
-                head.m_child_left = head.m_child_left.get_ref()->insert(child);
-            }
-        } else {
-            // right
-            if (head.m_child_right.is_none()) {
-                head.m_child_right = child;
-            } else {
-                head.m_child_right = head.m_child_right.get_ref()->insert(child);
-            }
-        }
-        return head;
+    if (node.is_some()) {
+        return insert(node->deref());
     } else {
+        // empty node? Just return this tree
         return Tree<T>(*this);
     }
 }
 
 template<typename T>
-Tree<T> Tree<T>::insert(Tree<T> child) const
+Tree<T> Tree<T>::insert(Tree<T> node) const
 {
-    return insert(Some(child));
+    return insert(node.deref());
 }
 
 template<typename T>
-Tree<T> Tree<T>::insert(T child) const
+Tree<T> Tree<T>::insert(T node) const
 {
-    return insert(Some(Tree<T>(child)));
+    Tree<T> head(*this); // copy of the node we're in. Can be safely modified.
+    if (m_node > node) {
+        // left
+        if (head.m_child_left.is_none()) {
+            // empty left side, at a leaf: do the insertion here
+            head.m_child_left = Some(Tree<T>(node));
+        } else {
+            // non-empty left side, continue recursing to a leaf
+            std::shared_ptr<Tree<T>> lchld = head.m_child_left.get_ref();
+            head.m_child_left = lchld->insert(node);
+        }
+    } else {
+        // right
+        if (head.m_child_right.is_none()) {
+            // empty right side, at a leaf: do the insertion here
+            head.m_child_right = Some(Tree<T>(node));
+        } else {
+            // non-empty right side, continue recursing to a leaf
+            std::shared_ptr<Tree<T>> rchld = head.m_child_right.get_ref();
+            head.m_child_right = rchld->insert(node);
+        }
+    }
+    return head;
 }
 
 
@@ -324,9 +330,12 @@ const Option<Tree<T>> Tree<T>::remove(const T& node) const
     if (m_node == node) {
         // remove this node
         if (is_leaf()) {
+            // Has neither left side or right side,
+            // so the node can be safely removed
             return None<Tree<T>>();
         } else if (head.left().is_some()) {
-            // left side
+            // At least has a left side.
+            // Use maximum from left side to replace this node
             Option<Tree<T>> max_node = None<Tree<T>>();
             head.m_child_left = head.left()->popMax(max_node);
             // max_node gets our children
@@ -334,7 +343,8 @@ const Option<Tree<T>> Tree<T>::remove(const T& node) const
             max_node->m_child_right = head.m_child_right;
             return max_node;
         } else {
-            // right side
+            // At least has a right side.
+            // Use minimum from right side to replace this node
             Option<Tree<T>> min_node = None<Tree<T>>();
             head.m_child_right = head.right()->popMin(min_node);
             // min_node gets our children
@@ -343,18 +353,24 @@ const Option<Tree<T>> Tree<T>::remove(const T& node) const
             return min_node;
         }
     } else if (m_node > node) {
-        // go left
+        // go left to find the node to remove
         if (head.m_child_left.is_none()) {
+            // oops, node doesn't exist in the tree!
+            // don't throw an error, just act normal
             return Some(*this);
         } else {
+            // continue recursing to the left
             head.m_child_left = head.m_child_left->remove(node);
             return Some(head);
         }
     } else {
-        // go right
+        // go right to find the node to remove
         if (head.m_child_right.is_none()) {
+            // oops, node doesn't exist in the tree!
+            // don't throw an error, you didn't see nuthin
             return Some(*this);
         } else {
+            // continue recursing to the right
             head.m_child_right = head.m_child_right->remove(node);
             return Some(head);
         }
