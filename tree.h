@@ -67,7 +67,7 @@ public:
     /**
      * @brief creates a new tree from a node
      */
-    Tree(T node);
+    Tree(const T node);
 
     /**
      * @brief return a reference to the minimum value in the tree.
@@ -113,7 +113,7 @@ public:
      * @note this is NOT an in-place operation.
      * The previous version of the tree is preserved.
      */
-    Tree<T> insert(Option<Tree<T>> node) const {
+    Tree<T> insert(const Option<Tree<T>> node) const {
         if (node.is_some()) {
             return insert(node->deref());
         } else {
@@ -128,7 +128,7 @@ public:
      * @note this is NOT an in-place operation.
      * The previous version of the tree is preserved.
      */
-    Tree<T> insert(Tree<T> node) const {
+    Tree<T> insert(const Tree<T> node) const {
         return insert(node.deref());
     }
 
@@ -138,7 +138,7 @@ public:
      * @note this is NOT an in-place operation.
      * The previous version of the tree is preserved.
      */
-    Tree<T> insert(T node) const;
+    Tree<T> insert(const T node) const;
 
     /**
      * @brief returns a new tree with node removed from it.
@@ -151,40 +151,40 @@ public:
     /**
      * @brief returns a copy of the contained value
      */
-    inline T operator*() const { return deref(); }
+    inline const T operator*() const { return deref(); }
 
     /**
      * @brief returns a copy of the contained value
      */
-    inline T deref() const { return m_node; }
+    inline const T deref() const { return m_node; }
 
     /**
      * @brief returns an Option containing the left subtree,
      * which could be a valid tree, or empty.
      */
-    inline Option<Tree<T>> left() const { return m_child_left; };
+    inline const Option<Tree<T>> left() const { return m_child_left; };
 
     /**
      * @brief returns an Option containing the right subtree,
      * which could be a valid tree, or empty.
      */
-    inline Option<Tree<T>> right() const { return m_child_right; };
+    inline const Option<Tree<T>> right() const { return m_child_right; };
 
 private:
 
     /**
      * @brief internal constructor for supplying children
      */
-    Tree(T node,
-         Option<Tree<T>> left,
-         Option<Tree<T>> right) :
+    Tree(const T node,
+         const Option<Tree<T>> left,
+         const Option<Tree<T>> right) :
         m_node(node),
         m_child_left(left),
         m_child_right(right)
     {};
 
     /**
-     * @brief blocked copy assignment operator
+     * @brief blocked copy assignment operator, not implemented
      */
     Tree<T>& operator=(const Tree<T>& head);
 
@@ -226,7 +226,7 @@ private:
  * @brief print the nodes in the tree
  */
 template<typename T>
-void print_tree(Option<Tree<T>> tree)
+void print_tree(const Option<Tree<T>> tree)
 {
     using namespace std;
     if (tree.is_none()) {
@@ -250,7 +250,7 @@ Tree<T>::Tree(const Tree<T>& head) :
 {};
 
 template<typename T>
-Tree<T>::Tree(T node) :
+Tree<T>::Tree(const T node) :
     m_node(node)
 {};
 
@@ -319,7 +319,7 @@ size_t Tree<T>::height() const
 
 
 template<typename T>
-Tree<T> Tree<T>::insert(T node) const
+Tree<T> Tree<T>::insert(const T node) const
 {
     if (m_node > node) {
         // left
