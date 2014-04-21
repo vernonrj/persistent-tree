@@ -4,8 +4,7 @@
  *
  * Contains a persistent binary search tree implementation.
  * Shared Pointers are used to manage the tree's memory, allowing
- * for parts of the tree to be used. Immutability is heavily,
- * but not totally, enforced.
+ * for parts of the tree to be used.
  * No balancing algorithm is currently implemented.
  *
  *
@@ -29,16 +28,12 @@
 #pragma once
 
 #include <iostream> // cout
+#include <list>     // used for iterators
 #include <memory>   // shared_ptr
 
 #include "option.h"
 
-template<typename T>
-class Tree;
-
-template<typename T>
-void print_tree(Option<Tree<T>> tree);
-
+template<typename T> class TreeIter;
 
 /**
  * @brief Persistent Tree
@@ -100,7 +95,7 @@ public:
     /**
      * @brief returns the number of elements in the tree
      */
-    size_t size() const;
+    inline size_t size() const { return m_size; };
 
     /**
      * @brief returns the maximum height of the tree
@@ -156,7 +151,7 @@ public:
     /**
      * @brief returns a copy of the contained value
      */
-    inline const T deref() const { return m_node; }
+    inline const T& deref() const { return m_node; }
 
     /**
      * @brief returns an Option containing the left subtree,
@@ -170,6 +165,37 @@ public:
      */
     inline const Option<Tree<T>> right() const { return m_child_right; };
 
+    // FIXME: This probably doesn't work yet
+    std::list<T> toList() const {
+        std::list<const T&> l;
+        if (m_child_left.is_some()) {
+            l.splice(l.end(), m_child_left->toList());
+        }
+        l.push_back(m_node);
+        if (m_child_right.is_some()) {
+            l.splice(l.end(), m_child_right->toList());
+        }
+        return l;
+    }
+
+    // FIXME: This definietely doesn't work yet
+    bool operator==(const Tree<T> rhs) const {
+        if (rhs.size() != size()) {
+            return false;
+        } else {
+        }
+    }
+
+    class TreeIter;
+    typedef TreeIter iterator;
+    typedef ptrdiff_t difference_type;
+    typedef size_t size_type;
+    typedef T value_type;
+    typedef T* pointer;
+    typedef T& reference;
+
+    iterator begin() const { return iterator(*this, 0); };
+    iterator end() const { return iterator(*this, size()); };
 private:
 
     /**
@@ -180,7 +206,8 @@ private:
          const Option<Tree<T>> right) :
         m_node(node),
         m_child_left(left),
-        m_child_right(right)
+        m_child_right(right),
+        m_size(tree_size(left) + tree_size(right))
     {};
 
     /**
@@ -219,8 +246,24 @@ private:
 
     /// The right subtree
     const Option<Tree<T>> m_child_right;
+
+    /// the number of nodes contained
+    const size_t m_size;
 };
 
+
+
+template<typename T>
+size_t tree_size(const Option<Tree<T>> tree)
+{
+    if (tree.is_none()) {
+        return 0;
+    } else {
+        return tree_size(tree->left()) +
+               1 +
+               tree_size(tree->right());
+    }
+}
 
 /**
  * @brief print the nodes in the tree
@@ -246,12 +289,15 @@ template<typename T>
 Tree<T>::Tree(const Tree<T>& head) :
     m_node(*head),
     m_child_left(head.m_child_left),
-    m_child_right(head.m_child_right)
+    m_child_right(head.m_child_right),
+    m_size(tree_size(head.m_child_left) + 1 + tree_size(head.m_child_right))
 {};
+
 
 template<typename T>
 Tree<T>::Tree(const T node) :
-    m_node(node)
+    m_node(node),
+    m_size(1)
 {};
 
 
@@ -300,14 +346,6 @@ bool Tree<T>::contains(const T& val) const
 }
 
 
-template<typename T>
-size_t Tree<T>::size() const
-{
-    size_t val = 1;
-    if (m_child_left.is_some()) { val += m_child_left->size(); }
-    if (m_child_right.is_some()) { val += m_child_right->size(); }
-    return val;
-}
 
 template<typename T>
 size_t Tree<T>::height() const
@@ -405,24 +443,20 @@ const Option<Tree<T>> Tree<T>::removeThisNode() const
         // At least has a left side.
         // Use maximum from left side to replace this node
         Option<Tree<T>> max_node = None<Tree<T>>();
-        Tree<T> head(m_node,
-                     m_child_left->popMax(max_node),
-                     m_child_right);
+        Option<Tree<T>> lchld = m_child_left->popMax(max_node);
         // max_node gets our children
         return Some(Tree<T>(max_node->deref(),
-                            head.m_child_left,
-                            head.m_child_right));
+                            lchld,
+                            m_child_right));
     } else {
         // At least has a right side.
         // Use minimum from right side to replace this node
         Option<Tree<T>> min_node = None<Tree<T>>();
-        Tree<T> head(m_node,
-                     m_child_left,
-                     m_child_right->popMin(min_node));
+        Option<Tree<T>> rchld = m_child_right->popMin(min_node);
         // min_node gets our children
         return Some(Tree<T>(min_node->deref(),
-                            head.m_child_left,
-                            head.m_child_right));
+                            m_child_left,
+                            rchld));
     }
 }
 
@@ -455,6 +489,49 @@ const Option<Tree<T>> Tree<T>::popMax(Option<Tree<T>>& max_node) const
         return m_child_left;
     }
 }
+
+
+
+template<typename T>
+class Tree<T>::TreeIter
+{
+public:
+    TreeIter(const Tree& tree, size_t index) :
+        m_tree(tree),
+        m_index(index),
+        m_size(tree.size())
+    {};
+    Tree<T>::iterator& operator++() {
+        m_index++;
+    }
+    const T& operator*() const {
+        return deref(m_tree, 0);
+    }
+    bool operator==(const Tree<T>::TreeIter& rhs) const {
+        return m_tree == rhs.m_tree && m_index == rhs.m_index;
+    }
+    bool operator!=(const Tree<T>::TreeIter& rhs) const {
+        return !operator==(rhs);
+    }
+private:
+    const T& deref(Option<Tree<T>> tree, size_t place) const {
+        size_t left_size = tree_size(tree->left());
+        // this is super inefficient
+        if (m_index == (place + left_size)) {
+            // found it
+            return tree->deref();
+        } else if (m_index < (place + left_size)) {
+            return deref(tree->left(), place);
+        } else {
+            return deref(tree->right(), place + left_size + 1);
+        }
+    }
+    enum ChildDir { LEFT, MIDDLE, RIGHT, };
+    const Tree<T>& m_tree;
+
+    size_t m_index;
+    const size_t m_size;
+};
 
 
 

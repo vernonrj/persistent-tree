@@ -171,3 +171,46 @@ BOOST_AUTO_TEST_CASE(test_tree_height)
     }
 }
 
+// BOOST_AUTO_TEST_CASE(test_tree_to_list)
+// {
+//     const int inserts[] = {5, 4, 8, 9, 1};
+//     Option<Tree<int>> tree(10);
+//     std::list<int> mylist;
+//     mylist.push_back(10);
+//     size_t len = sizeof(inserts)/sizeof(inserts[0]);
+//     for (size_t i=0; i<len; ++i) {
+//         tree = tree->insert(inserts[i]);
+//         mylist.push_back(inserts[i]);
+//     }
+//     mylist.sort();
+//     len += 1;
+//     std::list<int> treelist(tree->toList());
+//     BOOST_CHECK(mylist == treelist);
+// }
+
+// BOOST_AUTO_TEST_CASE(test_tree_equality)
+// {
+//     // test whether == works
+//     const int inserts[] = {5, 4, 8, 9, 1};
+//     Option<Tree<int>> tree1(Some(Tree<int>(10)));
+//     Option<Tree<int>> tree2(Some(Tree<int>(10)));
+//     BOOST_CHECK_MESSAGE(tree1.get_bare() == tree2.get_bare(),
+//                         "tree1 and tree2 should be equal");
+// }
+
+// BOOST_AUTO_TEST_CASE(test_tree_iterators)
+// {
+//     // test iterators
+//     const int inserts[] = {5, 4, 8, 9, 1};
+//     const size_t len = sizeof(inserts)/sizeof(inserts[0]);
+//     Option<Tree<int>> tree(Some(Tree<int>(10)));
+//     for (size_t i=0; i<len; ++i) {
+//         tree = tree->insert(inserts[i]);
+//     }
+//     Tree<int>::iterator it = tree->begin();
+//     for (Tree<int>::iterator it=tree->begin();
+//          it != tree->end();
+//          ++it) {
+//         std::cout << *it << std::endl;
+//     }
+// }
