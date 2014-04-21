@@ -5,8 +5,7 @@
  * Contains a persistent binary search tree implementation.
  * Shared Pointers are used to manage the tree's memory, allowing
  * for parts of the tree to be used. Immutability is heavily,
- * but not totally, enforced (by necessity for now, the copy assignment
- * constructor leaks mutability; take care using it on existing trees).
+ * but not totally, enforced.
  * No balancing algorithm is currently implemented.
  *
  *
@@ -71,16 +70,6 @@ public:
     Tree(T node);
 
     /**
-     * @brief in-place copy assignment operator
-     *
-     * This is the only public in-place operation. Use it sparingly on
-     * shared trees.
-     *
-     * @param head new node value and children to be loaded in
-     */
-    Tree<T>& operator=(const Tree<T>& head);
-
-    /**
      * @brief return a reference to the minimum value in the tree.
      *
      * @note behavior is undefined if the min is used after the
@@ -112,7 +101,7 @@ public:
      * @brief returns the number of elements in the tree
      */
     size_t size() const;
-    
+
     /**
      * @brief returns the maximum height of the tree
      */
@@ -124,7 +113,14 @@ public:
      * @note this is NOT an in-place operation.
      * The previous version of the tree is preserved.
      */
-    Tree<T> insert(Option<Tree<T>> node) const;
+    Tree<T> insert(Option<Tree<T>> node) const {
+        if (node.is_some()) {
+            return insert(node->deref());
+        } else {
+            // empty node? Just return this tree
+            return Tree<T>(*this);
+        }
+    }
 
     /**
      * @brief returns a new tree with node inserted into it.
@@ -132,7 +128,9 @@ public:
      * @note this is NOT an in-place operation.
      * The previous version of the tree is preserved.
      */
-    Tree<T> insert(Tree<T> node) const;
+    Tree<T> insert(Tree<T> node) const {
+        return insert(node.deref());
+    }
 
     /**
      * @brief returns a new tree with node inserted into it.
@@ -175,15 +173,33 @@ public:
 private:
 
     /**
+     * @brief internal constructor for supplying children
+     */
+    Tree(T node,
+         Option<Tree<T>> left,
+         Option<Tree<T>> right) :
+        m_node(node),
+        m_child_left(left),
+        m_child_right(right)
+    {};
+
+    /**
+     * @brief blocked copy assignment operator
+     */
+    Tree<T>& operator=(const Tree<T>& head);
+
+    /**
+     * @brief remove this node from the tree, preserving any children
+     */
+    const Option<Tree<T>> removeThisNode() const;
+
+    /**
      * @brief Return a new tree with the minimum value removed.
      *
      * @param[out] min_node the node containing the
      * minimum value that was removed
      */
-    const Option<Tree<T>> popMin
-    (
-        Option<Tree<T>>& min_node=None<Tree<T>>()
-    ) const;
+    const Option<Tree<T>> popMin(Option<Tree<T>>& min_node=None<Tree<T>>()) const;
 
     /**
      * @brief Return a new tree with the maximum value removed.
@@ -191,21 +207,18 @@ private:
      * @param[out] min_node the node containing the
      * maximum value that was removed
      */
-    const Option<Tree<T>> popMax
-    (
-        Option<Tree<T>>& max_node=None<Tree<T>>()
-    ) const;
+    const Option<Tree<T>> popMax(Option<Tree<T>>& max_node=None<Tree<T>>()) const;
 
     // Private members
 
     /// the contained value
-    T m_node;
+    const T m_node;
 
     /// The left subtree
-    Option<Tree<T>> m_child_left;
+    const Option<Tree<T>> m_child_left;
 
     /// The right subtree
-    Option<Tree<T>> m_child_right;
+    const Option<Tree<T>> m_child_right;
 };
 
 
@@ -242,15 +255,6 @@ Tree<T>::Tree(T node) :
 {};
 
 
-
-template<typename T>
-Tree<T>& Tree<T>::operator=(const Tree<T>& head)
-{
-    m_node = head.m_node;
-    m_child_left = head.m_child_left;
-    m_child_right = head.m_child_right;
-    return *this;
-}
 
 template<typename T>
 const T& Tree<T>::min() const
@@ -315,100 +319,69 @@ size_t Tree<T>::height() const
 
 
 template<typename T>
-Tree<T> Tree<T>::insert(Option<Tree<T>> node) const
-{
-    if (node.is_some()) {
-        return insert(node->deref());
-    } else {
-        // empty node? Just return this tree
-        return Tree<T>(*this);
-    }
-}
-
-template<typename T>
-Tree<T> Tree<T>::insert(Tree<T> node) const
-{
-    return insert(node.deref());
-}
-
-template<typename T>
 Tree<T> Tree<T>::insert(T node) const
 {
-    Tree<T> head(*this); // copy of the node we're in. Can be safely modified.
     if (m_node > node) {
         // left
-        if (head.m_child_left.is_none()) {
+        if (m_child_left.is_none()) {
             // empty left side, at a leaf: do the insertion here
-            head.m_child_left = Some(Tree<T>(node));
+            return Tree<T>(m_node,
+                           Some(Tree<T>(node)),
+                           m_child_right);
         } else {
             // non-empty left side, continue recursing to a leaf
-            std::shared_ptr<Tree<T>> lchld = head.m_child_left.get_ref();
-            head.m_child_left = lchld->insert(node);
+            std::shared_ptr<Tree<T>> lchld = m_child_left.get_ref();
+            return Tree<T>(m_node,
+                           Some(lchld->insert(node)),
+                           m_child_right);
         }
     } else {
         // right
-        if (head.m_child_right.is_none()) {
+        if (m_child_right.is_none()) {
             // empty right side, at a leaf: do the insertion here
-            head.m_child_right = Some(Tree<T>(node));
+            return Tree<T>(m_node,
+                           m_child_left,
+                           Some(Tree<T>(node)));
         } else {
             // non-empty right side, continue recursing to a leaf
-            std::shared_ptr<Tree<T>> rchld = head.m_child_right.get_ref();
-            head.m_child_right = rchld->insert(node);
+            std::shared_ptr<Tree<T>> rchld = m_child_right.get_ref();
+            return Tree<T>(m_node,
+                           m_child_left,
+                           rchld->insert(node));
         }
     }
-    return head;
 }
 
 
 template<typename T>
 const Option<Tree<T>> Tree<T>::remove(const T& node) const
 {
-    Tree<T> head(*this);
     if (m_node == node) {
-        // remove this node
-        if (is_leaf()) {
-            // Has neither left side or right side,
-            // so the node can be safely removed
-            return None<Tree<T>>();
-        } else if (head.left().is_some()) {
-            // At least has a left side.
-            // Use maximum from left side to replace this node
-            Option<Tree<T>> max_node = None<Tree<T>>();
-            head.m_child_left = head.left()->popMax(max_node);
-            // max_node gets our children
-            max_node->m_child_left = head.m_child_left;
-            max_node->m_child_right = head.m_child_right;
-            return max_node;
-        } else {
-            // At least has a right side.
-            // Use minimum from right side to replace this node
-            Option<Tree<T>> min_node = None<Tree<T>>();
-            head.m_child_right = head.right()->popMin(min_node);
-            // min_node gets our children
-            min_node->m_child_left = head.m_child_left;
-            min_node->m_child_right = head.m_child_right;
-            return min_node;
-        }
+        return removeThisNode();
     } else if (m_node > node) {
         // go left to find the node to remove
-        if (head.m_child_left.is_none()) {
+        if (m_child_left.is_none()) {
             // oops, node doesn't exist in the tree!
             // don't throw an error, just act normal
             return Some(*this);
         } else {
             // continue recursing to the left
-            head.m_child_left = head.m_child_left->remove(node);
+            Tree<T> head(m_node,
+                         m_child_left->remove(node),
+                         m_child_right);
             return Some(head);
         }
     } else {
         // go right to find the node to remove
-        if (head.m_child_right.is_none()) {
+        if (m_child_right.is_none()) {
             // oops, node doesn't exist in the tree!
             // don't throw an error, you didn't see nuthin
             return Some(*this);
         } else {
             // continue recursing to the right
-            head.m_child_right = head.m_child_right->remove(node);
+            Tree<T> head(m_node,
+                         m_child_left,
+                         m_child_right->remove(node));
             return Some(head);
         }
     }
@@ -420,14 +393,47 @@ const Option<Tree<T>> Tree<T>::remove(const T& node) const
 // Private methods
 
 
+template<typename T>
+const Option<Tree<T>> Tree<T>::removeThisNode() const
+{
+    // remove this node
+    if (is_leaf()) {
+        // Has neither left side or right side,
+        // so the node can be safely removed
+        return None<Tree<T>>();
+    } else if (m_child_left.is_some()) {
+        // At least has a left side.
+        // Use maximum from left side to replace this node
+        Option<Tree<T>> max_node = None<Tree<T>>();
+        Tree<T> head(m_node,
+                     m_child_left->popMax(max_node),
+                     m_child_right);
+        // max_node gets our children
+        return Some(Tree<T>(max_node->deref(),
+                            head.m_child_left,
+                            head.m_child_right));
+    } else {
+        // At least has a right side.
+        // Use minimum from right side to replace this node
+        Option<Tree<T>> min_node = None<Tree<T>>();
+        Tree<T> head(m_node,
+                     m_child_left,
+                     m_child_right->popMin(min_node));
+        // min_node gets our children
+        return Some(Tree<T>(min_node->deref(),
+                            head.m_child_left,
+                            head.m_child_right));
+    }
+}
+
 
 template<typename T>
 const Option<Tree<T>> Tree<T>::popMin(Option<Tree<T>>& min_node) const
 {
     if (m_child_left.is_some()) {
-        Tree<T> head(*this);
-        head.m_child_left = head.m_child_left->popMin(min_node);
-        return head;
+        return Some(Tree<T>(m_node,
+                            m_child_left->popMin(min_node),
+                            m_child_right));
     } else {
         // this is the min node
         min_node = Some(*this);
@@ -440,9 +446,9 @@ template<typename T>
 const Option<Tree<T>> Tree<T>::popMax(Option<Tree<T>>& max_node) const
 {
     if (m_child_right.is_some()) {
-        Tree<T> head(*this);
-        head.m_child_right = head.m_child_right->popMax(max_node);
-        return head;
+        return Some(Tree<T>(m_node,
+                            m_child_left,
+                            m_child_right->popMax(max_node)));
     } else {
         // this is the max node
         max_node = Some(*this);

@@ -79,8 +79,8 @@ BOOST_AUTO_TEST_CASE(test_tree_create)
 BOOST_AUTO_TEST_CASE(test_tree_insert)
 {
     // Test Tree insertion
-    Tree<int> tree1(5);
-    Tree<int> tree2(tree1.insert(6));
+    const Tree<int> tree1(5);
+    const Tree<int> tree2(tree1.insert(6));
     // trees are persistent data structures tree1 should not have
     // been modified by the insert()
     BOOST_CHECK( !tree1.contains(6) );
