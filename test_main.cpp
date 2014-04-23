@@ -24,6 +24,7 @@
  */
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Trees
+#include<iostream>
 #include<boost/test/unit_test.hpp>
 
 // link with -lboost_unit_test_framework
@@ -171,46 +172,80 @@ BOOST_AUTO_TEST_CASE(test_tree_height)
     }
 }
 
-// BOOST_AUTO_TEST_CASE(test_tree_to_list)
-// {
-//     const int inserts[] = {5, 4, 8, 9, 1};
-//     Option<Tree<int>> tree(10);
-//     std::list<int> mylist;
-//     mylist.push_back(10);
-//     size_t len = sizeof(inserts)/sizeof(inserts[0]);
-//     for (size_t i=0; i<len; ++i) {
-//         tree = tree->insert(inserts[i]);
-//         mylist.push_back(inserts[i]);
-//     }
-//     mylist.sort();
-//     len += 1;
-//     std::list<int> treelist(tree->toList());
-//     BOOST_CHECK(mylist == treelist);
-// }
+BOOST_AUTO_TEST_CASE(test_tree_to_list)
+{
+    const int inserts[] = {5, 4, 8, 9, 1};
+    Option<Tree<int>> tree(10);
+    std::list<int> mylist;
+    mylist.push_back(10);
+    size_t len = sizeof(inserts)/sizeof(inserts[0]);
+    for (size_t i=0; i<len; ++i) {
+        tree = tree->insert(inserts[i]);
+        mylist.push_back(inserts[i]);
+    }
+    mylist.sort();
+    len += 1;
+    std::list<int> treelist(tree->toList());
+    BOOST_CHECK(mylist == treelist);
+}
 
-// BOOST_AUTO_TEST_CASE(test_tree_equality)
-// {
-//     // test whether == works
-//     const int inserts[] = {5, 4, 8, 9, 1};
-//     Option<Tree<int>> tree1(Some(Tree<int>(10)));
-//     Option<Tree<int>> tree2(Some(Tree<int>(10)));
-//     BOOST_CHECK_MESSAGE(tree1.get_bare() == tree2.get_bare(),
-//                         "tree1 and tree2 should be equal");
-// }
+BOOST_AUTO_TEST_CASE(test_tree_equality)
+{
+    // test whether == works
+    const int inserts[] = {5, 4, 8, 9, 1};
+    const size_t len = sizeof(inserts)/sizeof(inserts[0]);
+    Option<Tree<int>> tree1(Some(Tree<int>(10)));
+    Option<Tree<int>> tree2(Some(Tree<int>(10)));
+    BOOST_CHECK_MESSAGE(tree1.get_bare() == tree2.get_bare(),
+                        "tree1 and tree2 should be equal");
+    for (size_t i=0; i<len; i++) {
+        tree1 = tree1->insert(inserts[i]);
+        tree2 = tree2->insert(inserts[i]);
+    }
+    BOOST_CHECK_MESSAGE(tree1.get_bare() == tree2.get_bare(),
+                        "tree1 and tree2 should be equal after insertions");
+    tree1 = tree1->insert(20);
+    BOOST_CHECK_MESSAGE(tree1.get_bare() != tree2.get_bare(),
+                        "tree1 and tree2 should NOT be equal now");
+}
 
-// BOOST_AUTO_TEST_CASE(test_tree_iterators)
-// {
-//     // test iterators
-//     const int inserts[] = {5, 4, 8, 9, 1};
-//     const size_t len = sizeof(inserts)/sizeof(inserts[0]);
-//     Option<Tree<int>> tree(Some(Tree<int>(10)));
-//     for (size_t i=0; i<len; ++i) {
-//         tree = tree->insert(inserts[i]);
-//     }
-//     Tree<int>::iterator it = tree->begin();
-//     for (Tree<int>::iterator it=tree->begin();
-//          it != tree->end();
-//          ++it) {
-//         std::cout << *it << std::endl;
-//     }
-// }
+BOOST_AUTO_TEST_CASE(test_tree_iterators)
+{
+    // test iterators
+    const int inserts[] = {5, 4, 8, 9, 1};
+    const size_t len = sizeof(inserts)/sizeof(inserts[0]);
+    Option<Tree<int>> tree(Some(Tree<int>(10)));
+    std::list<int> test_list;
+    test_list.push_back(10);
+    for (size_t i=0; i<len; ++i) {
+        tree = tree->insert(inserts[i]);
+        test_list.push_back(inserts[i]);
+    }
+    test_list.sort();
+    std::list<int> out_list;
+    for (Tree<int>::iterator it=tree->begin();
+         it != tree->end();
+         ++it) {
+        out_list.push_back(*it);
+    }
+
+    if (test_list != out_list) {
+        // print a more-helpful output if there's a failure
+        std::cout << "exp\tact" << std::endl;
+        typename std::list<int>::iterator it_test = test_list.begin();
+        typename std::list<int>::iterator it_out = out_list.begin();
+        while (it_test != test_list.end() || it_out != out_list.end()) {
+            if (it_test != test_list.end()) {
+                std::cout << *it_test;
+                ++it_test;
+            }
+            std::cout << "\t";
+            if (it_out != out_list.end()) {
+                std::cout << *it_out;
+                ++it_out;
+            }
+            std::cout << std::endl;
+        }
+        BOOST_ERROR("Expected list != Actual list");
+    }
+}

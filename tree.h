@@ -27,7 +27,6 @@
 
 #pragma once
 
-#include <iostream> // cout
 #include <list>     // used for iterators
 #include <memory>   // shared_ptr
 
@@ -165,9 +164,8 @@ public:
      */
     inline const Option<Tree<T>> right() const { return m_child_right; };
 
-    // FIXME: This probably doesn't work yet
     std::list<T> toList() const {
-        std::list<const T&> l;
+        std::list<T> l;
         if (m_child_left.is_some()) {
             l.splice(l.end(), m_child_left->toList());
         }
@@ -178,12 +176,27 @@ public:
         return l;
     }
 
-    // FIXME: This definietely doesn't work yet
-    bool operator==(const Tree<T> rhs) const {
+    bool operator==(const Tree<T>& rhs) const {
         if (rhs.size() != size()) {
             return false;
         } else {
+            std::list<T> us(toList());
+            std::list<T> them(rhs.toList());
+            typename std::list<T>::iterator it_us=us.begin();
+            typename std::list<T>::iterator it_them=them.begin();
+            for (;
+                 it_us != us.end() && it_them != them.end();
+                 ++it_us, ++it_them) {
+                if (*it_us != *it_them) {
+                    return false;
+                }
+            }
+            return true;
         }
+    }
+
+    inline bool operator!=(const Tree<T>& rhs) const {
+        return !operator==(rhs);
     }
 
     class TreeIter;
@@ -265,21 +278,6 @@ size_t tree_size(const Option<Tree<T>> tree)
     }
 }
 
-/**
- * @brief print the nodes in the tree
- */
-template<typename T>
-void print_tree(const Option<Tree<T>> tree)
-{
-    using namespace std;
-    if (tree.is_none()) {
-        return;
-    } else {
-        print_tree(tree->left());
-        cout << tree->deref() << endl;
-        print_tree(tree->right());
-    }
-}
 
 
 
@@ -492,29 +490,63 @@ const Option<Tree<T>> Tree<T>::popMax(Option<Tree<T>>& max_node) const
 
 
 
+
+
+
+/**
+ * @brief Iterator for Tree data structure
+ */
 template<typename T>
 class Tree<T>::TreeIter
 {
 public:
+    /**
+     * @brief constructor for tree iterator
+     */
     TreeIter(const Tree& tree, size_t index) :
         m_tree(tree),
         m_index(index),
         m_size(tree.size())
     {};
+
+    /**
+     * @brief increment iterator
+     */
     Tree<T>::iterator& operator++() {
         m_index++;
+        return *this;
     }
-    const T& operator*() const {
+
+    /**
+     * @brief dereference iterator
+     */
+    const T operator*() const {
         return deref(m_tree, 0);
     }
+
+    /**
+     * @brief return true if this iterator is equal to another iterator
+     */
     bool operator==(const Tree<T>::TreeIter& rhs) const {
         return m_tree == rhs.m_tree && m_index == rhs.m_index;
     }
+
+    /**
+     * @brief return false if this iterator is not equal to another iterator
+     */
     bool operator!=(const Tree<T>::TreeIter& rhs) const {
         return !operator==(rhs);
     }
+
 private:
-    const T& deref(Option<Tree<T>> tree, size_t place) const {
+
+    /**
+     * @brief alternate dereference method
+     */
+    const T deref(Option<Tree<T>> tree, size_t place) const {
+        if (m_index >= place + tree->size()) {
+            return 0;
+        }
         size_t left_size = tree_size(tree->left());
         // this is super inefficient
         if (m_index == (place + left_size)) {
@@ -526,10 +558,20 @@ private:
             return deref(tree->right(), place + left_size + 1);
         }
     }
-    enum ChildDir { LEFT, MIDDLE, RIGHT, };
+
+    /**
+     * @brief Tree to refer to
+     */
     const Tree<T>& m_tree;
 
+    /**
+     * @brief current index we're on
+     */
     size_t m_index;
+
+    /**
+     * @brief size of tree
+     */
     const size_t m_size;
 };
 

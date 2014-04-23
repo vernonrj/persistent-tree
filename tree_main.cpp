@@ -2,6 +2,22 @@
 
 #include "tree.h"
 
+/**
+ * @brief print the nodes in the tree
+ */
+template<typename T>
+void print_tree(const Option<Tree<T>> tree)
+{
+    using namespace std;
+    if (tree.is_none()) {
+        return;
+    } else {
+        print_tree(tree->left());
+        cout << tree->deref() << endl;
+        print_tree(tree->right());
+    }
+}
+
 int
 main(void)
 {
