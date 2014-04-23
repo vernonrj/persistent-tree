@@ -249,3 +249,26 @@ BOOST_AUTO_TEST_CASE(test_tree_iterators)
         BOOST_ERROR("Expected list != Actual list");
     }
 }
+
+
+BOOST_AUTO_TEST_CASE(test_rebalance)
+{
+    // test rebalancing
+    Option<Tree<int>> tree(Some(Tree<int>(0)));
+    // test insertions
+    for (int i=1; i<10; i++) {
+        tree = tree->insert(i);
+    }
+    BOOST_CHECK_MESSAGE(tree->height() == 4,
+                        "tree height of " << tree->height()
+                        << " should equal 4");
+    BOOST_CHECK(tree->is_balanced());
+    // test removals
+    for (int i=0; i<4; i++) {
+        tree = tree->remove(i);
+    }
+    BOOST_CHECK_MESSAGE(tree->height() == 3,
+                        "tree height of " << tree->height()
+                        << " should be equal to 3");
+    BOOST_CHECK(tree->is_balanced());
+}

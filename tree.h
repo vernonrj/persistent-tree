@@ -99,7 +99,21 @@ public:
     /**
      * @brief returns the maximum height of the tree
      */
-    size_t height() const;
+    inline size_t height() const { return m_height; };
+
+    /**
+     * @brief return true if tree is balanced
+     */
+    bool is_balanced() const {
+        size_t left_height = tree_height(m_child_left);
+        size_t right_height = tree_height(m_child_right);
+        if (left_height > right_height + 1 ||
+            right_height > left_height + 1) {
+            return false;
+        } else {
+            return true;
+        }
+    }
 
     /**
      * @brief returns a new tree with node inserted into it.
@@ -141,6 +155,11 @@ public:
      * The previous version of the tree is preserved.
      */
     const Option<Tree<T>> remove(const T& node) const;
+
+    /**
+     * @brief rebalances a tree (if required) using the AVL algorithm
+     */
+    const Tree<T> balance() const;
 
     /**
      * @brief returns a copy of the contained value
@@ -256,7 +275,8 @@ private:
         m_node(node),
         m_child_left(left),
         m_child_right(right),
-        m_size(tree_size(left) + tree_size(right))
+        m_size(tree_size(left) + tree_size(right)),
+        m_height(std::max(tree_height(left), tree_height(right)) + 1)
     {};
 
     /**
@@ -285,6 +305,28 @@ private:
      */
     const Option<Tree<T>> popMax(Option<Tree<T>>& max_node=None<Tree<T>>()) const;
 
+    /**
+     * @used for AVL algorithm to rebalance
+     *
+     *   H   -->   R
+     *    R  -->  H B
+     *     B -->
+     *
+     * Swap(Head->Right, Right->Left), Right becomes root
+     */
+    const Tree<T> rotLeft() const;
+
+    /**
+     * @used for AVL algorithm to rebalance
+     *
+     *     H -->   L
+     *    L  -->  B H
+     *   B   -->
+     *
+     * Swap(Head->Left, Left->Right), Left becomes root
+     */
+    const Tree<T> rotRight() const;
+
     // Private members
 
     /// the contained value
@@ -298,6 +340,9 @@ private:
 
     /// the number of nodes contained
     const size_t m_size;
+
+    /// the max height of the left and right subtrees, plus one
+    const size_t m_height;
 };
 
 
@@ -318,6 +363,19 @@ size_t tree_size(const Option<Tree<T>> tree)
 }
 
 
+/**
+ * @brief return the tree height of a tree wrapped in an Option type
+ */
+template<typename T>
+size_t tree_height(const Option<Tree<T>> tree)
+{
+    if (tree.is_none()) {
+        return 0;
+    } else {
+        return std::max(tree_height(tree->left()),
+                        tree_height(tree->right())) + 1;
+    }
+}
 
 
 
@@ -327,14 +385,17 @@ Tree<T>::Tree(const Tree<T>& head) :
     m_node(*head),
     m_child_left(head.m_child_left),
     m_child_right(head.m_child_right),
-    m_size(tree_size(head.m_child_left) + 1 + tree_size(head.m_child_right))
+    m_size(tree_size(head.m_child_left) + 1 + tree_size(head.m_child_right)),
+    m_height(std::max(tree_height(head.m_child_left),
+                      tree_height(head.m_child_right)) + 1)
 {};
 
 
 template<typename T>
 Tree<T>::Tree(const T node) :
     m_node(node),
-    m_size(1)
+    m_size(1),
+    m_height(1)
 {};
 
 
@@ -385,15 +446,6 @@ bool Tree<T>::contains(const T& val) const
 
 
 template<typename T>
-size_t Tree<T>::height() const
-{
-    size_t hgt_left = (m_child_left.is_some() ? m_child_left->height() : 0);
-    size_t hgt_right = (m_child_right.is_some() ? m_child_right->height() : 0);
-    return std::max(hgt_left, hgt_right) + 1;
-}
-
-
-template<typename T>
 Tree<T> Tree<T>::insert(const T node) const
 {
     if (m_node > node) {
@@ -402,13 +454,13 @@ Tree<T> Tree<T>::insert(const T node) const
             // empty left side, at a leaf: do the insertion here
             return Tree<T>(m_node,
                            Some(Tree<T>(node)),
-                           m_child_right);
+                           m_child_right).balance();
         } else {
             // non-empty left side, continue recursing to a leaf
             std::shared_ptr<Tree<T>> lchld = m_child_left.get_ref();
             return Tree<T>(m_node,
                            Some(lchld->insert(node)),
-                           m_child_right);
+                           m_child_right).balance();
         }
     } else {
         // right
@@ -416,13 +468,13 @@ Tree<T> Tree<T>::insert(const T node) const
             // empty right side, at a leaf: do the insertion here
             return Tree<T>(m_node,
                            m_child_left,
-                           Some(Tree<T>(node)));
+                           Some(Tree<T>(node))).balance();
         } else {
             // non-empty right side, continue recursing to a leaf
             std::shared_ptr<Tree<T>> rchld = m_child_right.get_ref();
             return Tree<T>(m_node,
                            m_child_left,
-                           rchld->insert(node));
+                           rchld->insert(node)).balance();
         }
     }
 }
@@ -444,7 +496,7 @@ const Option<Tree<T>> Tree<T>::remove(const T& node) const
             Tree<T> head(m_node,
                          m_child_left->remove(node),
                          m_child_right);
-            return Some(head);
+            return Some(head.balance());
         }
     } else {
         // go right to find the node to remove
@@ -457,12 +509,25 @@ const Option<Tree<T>> Tree<T>::remove(const T& node) const
             Tree<T> head(m_node,
                          m_child_left,
                          m_child_right->remove(node));
-            return Some(head);
+            return Some(head.balance());
         }
     }
 }
 
 
+template<typename T>
+const Tree<T> Tree<T>::balance() const
+{
+    if (tree_height(m_child_left) > tree_height(m_child_right) + 1) {
+        // left contains too many nodes. Rebalance
+        return rotRight();
+    }
+    if (tree_height(m_child_right) > tree_height(m_child_left) + 1) {
+        // right contains too many nodes. Rebalance
+        return rotLeft();
+    }
+    return *this;
+}
 
 
 // Private methods
@@ -527,6 +592,40 @@ const Option<Tree<T>> Tree<T>::popMax(Option<Tree<T>>& max_node) const
     }
 }
 
+
+
+template<typename T>
+const Tree<T> Tree<T>::rotLeft() const
+{
+    // swap head->right and right->left. Right becomes root
+    Option<Tree<T>> rchld = m_child_right;
+    if (rchld.is_none()) {
+        // if we're rotating left, the right node should NOT be None.
+        // we'll handle it gracefully, and not do the rotation.
+        return *this;
+    }
+    Option<Tree<T>> rleft = rchld->left();
+    Tree<T> new_head = Tree<T>(m_node, m_child_left, rleft);
+    Tree<T> new_right = Tree<T>(rchld->m_node, new_head, rchld->right());
+    return new_right;
+}
+
+
+template<typename T>
+const Tree<T> Tree<T>::rotRight() const
+{
+    // swap head->left and left->right. Left becomes root
+    Option<Tree<T>> lchld = m_child_left;
+    if (lchld.is_none()) {
+        // if we're rotating right, the left node should NOT be None.
+        // we'll handle it gracefully, and not do the rotation.
+        return *this;
+    }
+    Option<Tree<T>> lright = lchld->right();
+    Tree<T> new_head = Tree<T>(m_node, lright, m_child_right);
+    Tree<T> new_left = Tree<T>(lchld->m_node, lchld->left(), new_head);
+    return new_left;
+}
 
 
 

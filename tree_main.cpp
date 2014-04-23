@@ -18,6 +18,33 @@ void print_tree(const Option<Tree<T>> tree)
     }
 }
 
+template<typename T>
+bool print_tree_levels(const Option<Tree<T>> tree, int level=-1)
+{
+    using namespace std;
+    if (tree.is_none()) {
+        cout << "  ";
+        return false;
+    } else if (level < 0) {
+        cout << "printing tree levels" << endl;
+        for (;;) {
+            cout << "Level " << level + 1 << ": ";
+            if (!print_tree_levels(tree, ++level)) {
+                cout << endl;
+                return false;
+            }
+            cout << endl;
+        }
+    } else if (level == 0) {
+        cout << tree->deref() << " ";
+        return true;
+    } else {
+        bool more_to_do = print_tree_levels(tree->left(), level-1);
+        more_to_do |= print_tree_levels(tree->right(), level-1);
+        return more_to_do;
+    }
+}
+
 int
 main(void)
 {
@@ -34,7 +61,7 @@ main(void)
     mod = mod->insert(0);
 
     cout << "mod" << endl;
-    print_tree(mod);
+    print_tree_levels(mod);
     cout << endl << "STATS:" << endl;
     cout << "size: " << mod->size()
          << " height: " << mod->height() << endl;
@@ -42,7 +69,6 @@ main(void)
     cout << "min: " << mod->min() << endl;
     cout << "max: " << mod->max() << endl;
     cout << endl;
-
 
     cout << "removed (5):" << endl;
     print_tree(mod->remove(5));
@@ -64,5 +90,20 @@ main(void)
 
     cout << "tree is same?" << endl;
     print_tree(tree);
+
+    Option<Tree<int>> unbal(Tree<int>(0));
+    for (int i=1; i<10; i++) {
+        unbal = unbal->insert(i);
+    }
+    print_tree_levels(unbal);
+    unbal = unbal->balance();
+    cout << "balanced now? " << unbal->is_balanced() << endl;
+    print_tree_levels(unbal);
+    unbal = unbal->remove(0);
+    unbal = unbal->remove(1);
+    unbal = unbal->remove(2);
+    unbal = unbal->remove(3);
+    cout << "balanced now? " << unbal->is_balanced() << endl;
+    print_tree_levels(unbal);
 }
 
