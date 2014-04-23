@@ -37,6 +37,8 @@
  * This Option type can be Some or None. It can be checked for Some/None,
  * and dereferenced. If None is dereferenced, an exception is thrown.
  * In a perfect world, this would be enforced at compile-time. It is not.
+ *
+ * Each time an Option is created, two allocs are done.
  */
 template<typename T>
 class Option
@@ -73,7 +75,7 @@ public:
      */
     Option(T *value, bool assume_ownership=true) :
         m_value(std::shared_ptr<T>(assume_ownership ? value
-                                                    : new T(value))),
+                                                    : new T(*value))),
         m_is_some(true)
     {};
 

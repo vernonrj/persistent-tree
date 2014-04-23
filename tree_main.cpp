@@ -35,9 +35,14 @@ main(void)
 
     cout << "mod" << endl;
     print_tree(mod);
+    cout << endl << "STATS:" << endl;
+    cout << "size: " << mod->size()
+         << " height: " << mod->height() << endl;
 
     cout << "min: " << mod->min() << endl;
     cout << "max: " << mod->max() << endl;
+    cout << endl;
+
 
     cout << "removed (5):" << endl;
     print_tree(mod->remove(5));

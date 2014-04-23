@@ -176,6 +176,11 @@ public:
         return l;
     }
 
+    /**
+     * @brief equality operator overload
+     *
+     * Returns True if two trees contain the same values
+     */
     bool operator==(const Tree<T>& rhs) const {
         if (rhs.size() != size()) {
             return false;
@@ -191,24 +196,55 @@ public:
                     return false;
                 }
             }
-            return true;
+            if (it_us != us.end() || it_them != them.end()) {
+                return false;
+            } else {
+                return true;
+            }
         }
     }
 
+    /**
+     * @brief inequality operator overload
+     *
+     * Returns True if two trees do not contain the same values
+     */
     inline bool operator!=(const Tree<T>& rhs) const {
         return !operator==(rhs);
     }
 
     class TreeIter;
+
+    /// iterator type definition (for TreeIter iterators)
     typedef TreeIter iterator;
+
+    /// difference type definition (for TreeIter iterators)
     typedef ptrdiff_t difference_type;
+
+    /// size type definition (for TreeIter iterators)
     typedef size_t size_type;
+
+    /// value type definition (for TreeIter iterators, varies by template type)
     typedef T value_type;
+
+    /// pointer type definition (for TreeIter iterators,
+    /// varies by template type
     typedef T* pointer;
+
+    /// reference type definition (for TreeIter iterators,
+    /// varies by template type
     typedef T& reference;
 
-    iterator begin() const { return iterator(*this, 0); };
-    iterator end() const { return iterator(*this, size()); };
+    /**
+     * @brief return an iterator to the min element in a tree
+     */
+    iterator begin() const { return iterator(*this, TreeIter::START); };
+
+    /**
+     * @brief return an iterator to after the max element in a tree
+     */
+    iterator end() const { return iterator(*this, TreeIter::END); };
+
 private:
 
     /**
@@ -266,6 +302,9 @@ private:
 
 
 
+/**
+ * @brief return the tree size of a tree wrapped in an Option type
+ */
 template<typename T>
 size_t tree_size(const Option<Tree<T>> tree)
 {
@@ -501,11 +540,16 @@ class Tree<T>::TreeIter
 {
 public:
     /**
+     * @brief denoting position to begin at in iterator
+     */
+    enum Position { START, END };
+
+    /**
      * @brief constructor for tree iterator
      */
-    TreeIter(const Tree& tree, size_t index) :
+    TreeIter(const Tree& tree, Position position) :
         m_tree(tree),
-        m_index(index),
+        m_index(position == START ? 0 : tree.size()),
         m_size(tree.size())
     {};
 
@@ -541,7 +585,7 @@ public:
 private:
 
     /**
-     * @brief alternate dereference method
+     * @brief dereference at a certain point
      */
     const T deref(Option<Tree<T>> tree, size_t place) const {
         if (m_index >= place + tree->size()) {
